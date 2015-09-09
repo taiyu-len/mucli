@@ -40,8 +40,9 @@ mucli;
 
 // Common strings
 #define DOMAIN_URL "https://www.mangaupdates.com/"
-#define LOGIN_URL  "https://www.mangaupdates.com/login.html"
-#define LOGOUT_URL "https://www.mangaupdates.com/login.html?act=logout"
+#define LOGIN_URL  DOMAIN_URL "login.html"
+#define LOGOUT_URL DOMAIN_URL "login.html?act=logout"
+#define LIST_URL   DOMAIN_URL "mylist.html"
 
 
 // Attributes
