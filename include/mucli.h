@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "interface.h"
+#include "attr.h"
 
 // Program state
 extern struct mucli
@@ -35,6 +37,8 @@ extern struct mucli
 		const char *username;
 	}
 	account;
+
+	struct interface interface;
 }
 mucli;
 
@@ -43,11 +47,6 @@ mucli;
 #define LOGIN_URL  DOMAIN_URL "login.html"
 #define LOGOUT_URL DOMAIN_URL "login.html?act=logout"
 #define LIST_URL   DOMAIN_URL "mylist.html"
-
-
-// Attributes
-#define NONULL __attribute__((nonnull))
-#define USERET __attribute__((warn_unused_result))
 
 #endif /*_MUCLI_H*/
 

@@ -2,7 +2,6 @@
 #include "init.h"
 #include "mucli.h"
 #include "macro.h"
-#include "log.h"
 
 // curl_share lock functions
 static void
@@ -79,23 +78,6 @@ init_connection(int argc, char **argv)
 #undef setopt
 }
 
-static int (*const init[])(int argc, char **argv) =
-{
-	init_state,
-	init_mutex,
-	init_connection,
-};
-
-int
-mucli_init(int argc, char **argv)
-{
-	size_t i;
-	for (i = 0; i < sizeof init/ sizeof *init; ++i)
-		if (init[i](argc, argv) != EXIT_SUCCESS)
-			return EXIT_FAILURE;
-	return EXIT_SUCCESS;
-}
-
 // Clean functions
 static void
 clean_connection(void)
@@ -121,11 +103,30 @@ clean_mutex(void)
 	}
 }
 
+static int (*const init[])(int argc, char **argv) =
+{
+	init_state,
+	init_interface,
+	init_mutex,
+	init_connection,
+};
+
 static void (*const clean[])(void) =
 {
 	clean_connection,
 	clean_mutex,
+	clean_interface,
 };
+
+int
+mucli_init(int argc, char **argv)
+{
+	size_t i;
+	for (i = 0; i < sizeof init/ sizeof *init; ++i)
+		if (init[i](argc, argv) != EXIT_SUCCESS)
+			return EXIT_FAILURE;
+	return EXIT_SUCCESS;
+}
 
 void mucli_clean(void)
 {

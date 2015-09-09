@@ -30,7 +30,6 @@ _nowrite(char *p, size_t s, size_t n, void *u);
 		 ! (curl = curl_easy_init()) \
 		|| (code = curl_share(curl)) \
 		|| (code = curl_quiet(curl)) \
-		|| (code = curl_verbose(curl)) \
 		|| (code = curl_url(curl, url))
 
 #define curl_response(curl,resp) \

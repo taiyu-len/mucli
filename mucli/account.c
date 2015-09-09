@@ -1,13 +1,13 @@
 /* account.c */
 #include "account.h"
 #include "mucli.h"
-#include "log.h"
 #include "macro.h"
+#include "attr.h"
 
-char *
+char * NONULL USERET
 strdup(const char *);
 
-void
+void NONULL
 mucli_login(const char *username, const char *password)
 {
 	int err;
@@ -20,10 +20,10 @@ mucli_login(const char *username, const char *password)
 		return;
 	else if (err)
 	{
-		mucli_log(LOG_ERROR, "mutex locking failed %s", strerror(err));
+		mucli_log(LOG_ERROR, "mutex locking failed `%s'", strerror(err));
 		return;
 	}
-	mucli_log(LOG_INFO, "Logging into account %s", username);
+	mucli_log(LOG_INFO, "Logging into account `%s'", username);
 
 	mucli.account.state = LOGGING_IN;
 	mucli.account.username = strdup(username);
@@ -53,13 +53,16 @@ mucli_login(const char *username, const char *password)
 		curl_easy_cleanup(eh);
 	}
 	if (response == LOGIN_SUCCESS)
+	{
 		mucli.account.state = LOGGED_IN;
+		mucli_log(LOG_INFO, "Successfully logged into account `%s'", username);
+	}
 	else
 	{
 		mucli.account.state = LOGGED_OUT;
 		free((void *)mucli.account.username);
 		mucli.account.username = NULL;
-		mucli_log(LOG_INFO, "Login Failed");
+		mucli_log(LOG_INFO, "Failed to log into account `%s'", username);
 	}
 
 	if ((err = pthread_mutex_unlock(&mucli.account.lock)))

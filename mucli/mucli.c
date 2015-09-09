@@ -3,7 +3,6 @@
 #include "init.h"
 #include "macro.h"
 #include "account.h"
-#include "log.h"
 
 #include <stdio.h>
 
@@ -18,12 +17,6 @@ main(int argc, char **argv)
 	if (mucli_init(argc, argv) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
-	mucli_log(LOG_DEBUG,"debug");
-	mucli_log(LOG_INFO ,"info");
-	mucli_log(LOG_WARN ,"warn");
-	mucli_log(LOG_ERROR,"error");
-	mucli_log(LOG_FATAL,"fatal");
-
 	if (argc >= 3)
 		mucli_login(argv[1], argv[2]);
 	if (mucli.account.state == LOGGED_IN) {
@@ -32,7 +25,4 @@ main(int argc, char **argv)
 
 	mucli_clean();
 }
-
-// Init functions
-// Lock functions
 
