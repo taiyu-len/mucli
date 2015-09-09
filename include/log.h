@@ -13,7 +13,8 @@ extern char const * const logcolor[LOG_LAST];
 
 // TODO much better logging
 #define mucli_log(v, str, ...) \
-	fprintf(stderr, "%s" str "[0m\n", logcolor[v], ##__VA_ARGS__)
+	fprintf(stderr, "%s[100m %-32s [49m" str "[0m\n", logcolor[v],\
+			__PRETTY_FUNCTION__ ,##__VA_ARGS__)
 
 
 

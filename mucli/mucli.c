@@ -30,6 +30,17 @@ main(int argc, char **argv)
 	for (i = 0; i < sizeof init / sizeof *init; ++i)
 		if (init[i](argc, argv) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
+	mucli_log(LOG_DEBUG,"debug");
+	mucli_log(LOG_INFO ,"info");
+	mucli_log(LOG_WARN ,"warn");
+	mucli_log(LOG_ERROR,"error");
+	mucli_log(LOG_FATAL,"fatal");
+	if (argc >= 3)
+		mucli_login(argv[1], argv[2]);
+	if (mucli.account.state == LOGGED_IN) {
+		mucli_log(LOG_DEBUG, "logged into %s", mucli.account.username);
+		mucli_logout();
+	}
 }
 
 // Init functions
@@ -90,10 +101,26 @@ init_connection(int argc, char **argv)
 
 // Lock functions
 
+static const char * const lock_data_str[] =
+{
+	[CURL_LOCK_DATA_SHARE]       = "Share",
+	[CURL_LOCK_DATA_COOKIE]      = "Cookie",
+	[CURL_LOCK_DATA_DNS]         = "DNS",
+	[CURL_LOCK_DATA_SSL_SESSION] = "SSL Session",
+	[CURL_LOCK_DATA_CONNECT]     = "Connect",
+};
+static const char * const lock_access_str[] =
+{
+	[CURL_LOCK_ACCESS_NONE]   = "None",
+	[CURL_LOCK_ACCESS_SHARED] = "Share",
+	[CURL_LOCK_ACCESS_SINGLE] = "Single",
+};
+
 void
 curlsh_lock(CURL *h, curl_lock_data d, curl_lock_access l, void *u)
 {
 	(void)h, (void)d, (void)l, (void)u;
+	mucli_log(LOG_DEBUG,"%s:%s", lock_data_str[d], lock_access_str[l]);
 	int err = pthread_mutex_lock(&mucli.connection.lock);
 	if (err)
 		mucli_log(LOG_ERROR, "mutex lock failure %s", strerror(err));
@@ -103,6 +130,7 @@ void
 curlsh_unlock(CURL *h, curl_lock_data d, void *u)
 {
 	(void)h, (void)d, (void)u;
+	mucli_log(LOG_DEBUG,"%s", lock_data_str[d]);
 	int err = pthread_mutex_unlock(&mucli.connection.lock);
 	if (err)
 		mucli_log(LOG_ERROR, "mutex unlock failure %s", strerror(err));
