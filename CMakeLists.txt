@@ -7,6 +7,7 @@ SET(CMAKE_THREAD_PREFER_PTHREAD ON)
 SET(THREADS_PREFER_PTHREAD_FLAG ON)
 FIND_PACKAGE(Threads REQUIRED)
 FIND_PACKAGE(CURL REQUIRED)
+FIND_PACKAGE(Curses REQUIRED)
 
 # Source
 FILE(GLOB SOURCES ${PROJECT_SOURCE_DIR}/mucli/*.c)
@@ -15,17 +16,19 @@ ADD_EXECUTABLE(mucli ${SOURCES})
 # Headers
 INCLUDE_DIRECTORIES(
 	${CURL_INCLUDE_DIRS}
+	${CURSES_INCLUDE_DIRS}
 	include
 )
 
 # C options
 SET(CMAKE_C_FLAGS "-g")
 SET(CMAKE_C_STANDARD 99)
-ADD_DEFINITIONS("-Wall -Wextra -Wno-unused-parameter -Wno-unused-value")
+ADD_DEFINITIONS("-Wall -Wextra -Wno-unused-parameter -Wno-unused-value -Wno-format-zero-length")
 
 TARGET_LINK_LIBRARIES(mucli
 	Threads::Threads
 	${CURL_LIBRARIES}
+	${CURSES_LIBRARIES}
 )
 
 INSTALL(TARGETS mucli
