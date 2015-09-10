@@ -3,15 +3,74 @@
 #include <ncurses.h>
 #include <stddef.h>
 
-struct interface
+// Generic containers used for easy layout management
+union box;
+enum type { CONT, WIN } type;
+
+struct common
 {
-	WINDOW *win;
-	// Small window on bottom of screen that shows logs
+	enum type type;
 	struct
 	{
-		WINDOW *win;
-		size_t h;
-		// What to show in log
+		short x, y;
+		short w, h;
+	}
+	size;
+	short weight;
+};
+
+struct container
+{
+	enum type type;
+	struct
+	{
+		short x, y;
+		short w, h;
+	}
+	size;
+	short weight;
+	// Whether the boundry between children are on a ROW or COL
+	enum split { ROW,  COL } split;
+	char  length;
+	union box **child;
+};
+
+struct window
+{
+	enum type type;
+	struct
+	{
+		short x, y;
+		short w, h;
+	}
+	size;
+	short weight;
+	WINDOW *ptr;
+	int (*redraw)(struct window *);
+};
+
+union box
+{
+	enum type type;
+	struct common    common;
+	struct window    window;
+	struct container container;
+};
+
+// Interface  structure
+
+struct interface
+{
+	// Main window returned by initscr()
+	WINDOW *win;
+
+	// Main container
+	struct container main;
+
+	// mucli_log prints here.
+	struct
+	{
+		struct window win;
 		enum verbosity
 		{
 			LOG_DEBUG,

@@ -27,6 +27,7 @@ static int
 init_state(int argc, char **argv)
 {
 	(void)argc, (void)argv;
+	//TODO handle this via argument
 	mucli.connection.max_tries = 10;
 
 	mucli.account.state = LOGGED_OUT;
