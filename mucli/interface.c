@@ -5,6 +5,8 @@
 #include <stdarg.h>
 #include <time.h>
 
+
+
 // -Layout-
 //
 // |--------|
@@ -21,28 +23,35 @@
 
 // Container management functions
 static struct container * USERET
-new_cont(enum split split, short weight)
+new_container(enum split split, short weight)
 {
 	struct container *cont = malloc(sizeof(struct container));
 	cont->type   = CONT;
 	cont->split  = split;
 	cont->weight = weight;
 	cont->length = 0;
-	cont->child  = malloc(0);
+	cont->child  = NULL;
 	return cont;
 }
 
 static void NONULL
-free_cont(struct container *cont) { free(cont->child); free(cont); }
+free_container(struct container *cont)
+{
+	free(cont->child);
+	free(cont);
+}
 
 static void NONULL
-add_child(struct container *cont, union box *box)
+add_child(struct container *cont, box_ptr_t box)
 {
 	void *tmp = realloc(cont->child, ++cont->length * sizeof(*cont->child));
-	if (!tmp)
-		mucli_log(LOG_FATAL, "reallocation Failed");
-	cont->child = tmp;
-	cont->child[cont->length - 1] = box;
+	if (tmp)
+	{
+		cont->child = tmp;
+		cont->child[cont->length - 1] = box;
+		return;
+	}
+	mucli_log(LOG_FATAL, "reallocation Failed");
 }
 
 
@@ -53,10 +62,12 @@ window_init(struct window *window)
 {
 	WINDOW *win = newwin(window->size.h, window->size.w,
 			window->size.y, window->size.x);
-	if (win == NULL)
-		mucli_log(LOG_FATAL, "Failed to create window");
-	mucli_log(LOG_DEBUG, "Creating window");
-	return win;
+	if (win)
+	{
+		mucli_log(LOG_DEBUG, "Creating window");
+		return win;
+	}
+	mucli_log(LOG_FATAL, "Failed to create window");
 }
 
 static bool
@@ -107,26 +118,28 @@ redraw_log(struct window *log)
 // Layout functions
 
 static int NONULL
-_update_layout(union box *box)
+_update_layout(box_ptr_t box)
 {
 	mucli_log(LOG_DEBUG, "(%dx%d)@(%dx%d)",
-			box->common.size.h, box->common.size.w,
-			box->common.size.y, box->common.size.x);
-	if (box->type == WIN)
-		return box->window.redraw(&box->window);
-	if (box->type != CONT)
-	{
+			box.common->size.h, box.common->size.w,
+			box.common->size.y, box.common->size.x);
+	if (*box.type == WIN)
+		return box.window->redraw(box.window);
+
+	if (*box.type != CONT)
+	{ // Should never happen
 		mucli_log(LOG_FATAL, "Something very wrong happened");
-		return EXIT_FAILURE;
 	}
-	struct container *cont = &box->container;
+
+	struct container *cont = box.container;
 	if (cont->length == 0)
 		return EXIT_SUCCESS;
+
 	int i;
 	// find total weight
-	short weight = 0;
+	short weight = 1;
 	for (i = 0; i < cont->length; ++i)
-		weight += cont->child[i]->common.weight;
+		weight += cont->child[i].common->weight;
 
 	if (cont->split == COL)
 	{
@@ -137,22 +150,22 @@ _update_layout(union box *box)
 		short h = cont->size.h;
 		short t = 0;
 		for (i = 0; i < cont->length; ++i)
-		{
-			union box *child = cont->child[i];
-			child->common.size.y = y;
-			child->common.size.h = h;
-			t += child->common.size.w = (w * child->common.weight) / weight;
+		{ // Get width
+			box_ptr_t child = cont->child[i];
+			child.common->size.y = y;
+			child.common->size.h = h;
+			t += child.common->size.w = (w * child.common->weight) / weight;
 		}
-		// add extra lines
-		w -= t;
-		for (i = 0; i < w; ++i)
-			cont->child[i]->common.size.w++;
-		// set x values
+		{ // add extra lines
+			w -= t;
+			for (i = 0; i < w; ++i)
+				cont->child[i % cont->length].common->size.w++;
+		}
 		for (i = 0; i < cont->length; ++i)
-		{
-			union box *child = cont->child[i];
-			child->common.size.x = x;
-			x += child->common.size.w + 1;
+		{ // set x values
+			box_ptr_t child = cont->child[i];
+			child.common->size.x = x;
+			x += child.common->size.w + 1;
 			mvvline(y, x-1, '|', h);
 			_update_layout(child);
 		}
@@ -167,21 +180,22 @@ _update_layout(union box *box)
 		short t = 0;
 		for (i = 0; i < cont->length; ++i)
 		{
-			union box *child = cont->child[i];
-			child->common.size.x = x;
-			child->common.size.w = w;
-			t += child->common.size.h = (h * child->common.weight) / weight;
+			box_ptr_t child = cont->child[i];
+			child.common->size.x = x;
+			child.common->size.w = w;
+			t += child.common->size.h = (h * child.common->weight) / weight;
 		}
 		// add extra lines
 		h -= t;
 		for (i = 0; i < h; ++i)
-			cont->child[i]->common.size.h++;
+			cont->child[i % cont->length].common->size.h++;
+
 		// set y values and recurse for children
 		for (i = 0; i < cont->length; ++i)
 		{
-			union box *child = cont->child[i];
-			child->common.size.y = y;
-			y += child->common.size.h + 1;
+			box_ptr_t child = cont->child[i];
+			child.common->size.y = y;
+			y += child.common->size.h + 1;
 			mvwhline(mucli.interface.win, y-1, x, '-', w);
 			_update_layout(child);
 		}
@@ -192,7 +206,7 @@ _update_layout(union box *box)
 }
 
 static int NONULL
-update_layout(union box *box)
+update_layout(box_ptr_t box)
 {
 	int retval = _update_layout(box);
 	wnoutrefresh(mucli.interface.win);
@@ -204,17 +218,16 @@ static int
 init_layout(int argc, char **argv)
 {
 	struct interface *const IF = &mucli.interface;
-	{
-		// initialize main container
-		struct container *tmp = new_cont(ROW, 0);
+	{ /* Initilize main container */
+		struct container *tmp = new_container(ROW, 0);
 		IF->main = *tmp;
+		free_container(tmp);
 		getbegyx(IF->win, IF->main.size.x, IF->main.size.y);
 		getmaxyx(IF->win, IF->main.size.h, IF->main.size.w);
-		add_child(&IF->main, (union box *)new_cont(COL, 8));
-		add_child(&IF->main, (union box *)&IF->log.win);
+		add_child(&IF->main, new_container(COL, 8));
+		add_child(&IF->main, &IF->log.win);
 	}
-	{
-		// Set Logging window
+	{ /* Initilize log container */
 		IF->log.win.ptr    = NULL;
 		IF->log.win.type   = WIN;
 		IF->log.win.weight = 2;
@@ -222,8 +235,7 @@ init_layout(int argc, char **argv)
 		redraw_log(&IF->log.win);
 	}
 
-	// TODO Rearrange windows
-	if (update_layout((union box *)&IF->main) != EXIT_SUCCESS)
+	if (update_layout(&IF->main) != EXIT_SUCCESS)
 		goto fail;
 	return EXIT_SUCCESS;
 	fail:
@@ -283,9 +295,8 @@ clean_interface(void)
 }
 
 
-
 void
-_mucli_log(enum verbosity v, const char *func, const char *str, ...)
+_mucli_vlog(enum verbosity v, const char *func, const char *str, va_list ap)
 {
 	static struct log_type {
 		char  const *const str;
@@ -301,18 +312,20 @@ _mucli_log(enum verbosity v, const char *func, const char *str, ...)
 	};
 	if (v < mucli.interface.log.verbosity)
 		return;
-	if (v >= LOG_LAST)
-		mucli_log(LOG_ERROR, "Invalid verbosity level %d", v);
-	else if (mucli.interface.log.win.ptr)
-	{
-		va_list args;
-		va_start(args, str);
 
+	else if (v >= LOG_LAST)
+	{
+		mucli_log(LOG_ERROR, "Invalid verbosity level %d", v);
+		return;
+	}
+	// Time
+	time_t _now = time(0);
+	char now[8];
+	strftime(now, 9, "%H:%M:%S", localtime(&_now));
+
+	if (mucli.interface.log.win.ptr)
+	{ /* Print to ncurses log window */
 		WINDOW *win = mucli.interface.log.win.ptr;
-		// Time
-		time_t _now = time(0);
-		char now[8];
-		strftime(now, 9, "%H:%M:%S", localtime(&_now));
 		if (// Print log to screen, and scroll old log down
 				wmove(win, 0, 0) == ERR
 				|| wscrl(win, -1) == ERR
@@ -326,13 +339,39 @@ _mucli_log(enum verbosity v, const char *func, const char *str, ...)
 				|| wattroff(win, PAIR(log_type[v].fg, BRIGHT(COLOR_BLACK))) == ERR
 				// Print log
 				|| wprintw(win, " ") == ERR
-				|| vwprintw(win, str, args) == ERR
+				|| vwprintw(win, str, ap) == ERR
 				|| wattroff(win, log_type[v].intesity) == ERR
 				|| wrefresh(win) == ERR)
 			wprintw(win, "Failed to print log");
-
-		// Cleanup
-		va_end(args);
 	}
+	else
+	{ /* Print to stderr */
+		// Time
+		time_t _now = time(0);
+		char now[8];
+		strftime(now, 9, "%H:%M:%S", localtime(&_now));
+		fprintf(stderr, "%s", log_type[v].str);
+		fprintf(stderr, " %8s | %-32s", now, func);
+		vfprintf(stderr, str, ap);
+	}
+}
+
+void
+_mucli_log(enum verbosity v, const char *func, const char *str, ...)
+{
+	va_list ap;
+	va_start(ap, str);
+	_mucli_vlog(v, func, str, ap);
+	va_end(ap);
+}
+
+void
+_mucli_fatal(const char *func, const char *str, ...)
+{
+	va_list ap;
+	va_start(ap, str);
+	_mucli_vlog(LOG_FATAL, func, str, ap);
+	va_end(ap);
+	exit(-1);
 }
 

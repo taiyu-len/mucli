@@ -10,7 +10,7 @@ curlsh_lock(CURL *h, curl_lock_data d, curl_lock_access l, void *u)
 	(void)h, (void)d, (void)l, (void)u;
 	int err = pthread_mutex_lock(&mucli.connection.lock);
 	if (err)
-		mucli_log(LOG_ERROR, "mutex lock failure %s", strerror(err));
+		mucli_log(LOG_FATAL, "mutex lock failure %s", strerror(err));
 }
 
 static void
@@ -19,7 +19,7 @@ curlsh_unlock(CURL *h, curl_lock_data d, void *u)
 	(void)h, (void)d, (void)u;
 	int err = pthread_mutex_unlock(&mucli.connection.lock);
 	if (err)
-		mucli_log(LOG_ERROR, "mutex unlock failure %s", strerror(err));
+		mucli_log(LOG_FATAL, "mutex unlock failure %s", strerror(err));
 }
 
 // Init functions
@@ -59,7 +59,7 @@ init_connection(int argc, char **argv)
 		type, opt)
 	(void)argc, (void)argv;
 	CURLcode   code;
-	CURLSHcode codesh;
+	CURLSHcode codesh = 0;
 
 	if ((code = curl_global_init(CURL_GLOBAL_ALL))
 			|| !(mucli.connection.curlsh = curl_share_init( ))
@@ -73,8 +73,9 @@ init_connection(int argc, char **argv)
 	return EXIT_SUCCESS;
 	fail:
 	mucli_log(LOG_FATAL, "Failed to initialize curl: %s",
-		code ? curl_easy_strerror(code) :
-		codesh ? curl_share_strerror(codesh) : "");
+			code   ? curl_easy_strerror(code) :
+			codesh ? curl_share_strerror(codesh) :
+			"");
 	return EXIT_FAILURE;
 #undef setopt
 }
