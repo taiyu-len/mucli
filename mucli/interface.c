@@ -224,8 +224,8 @@ init_layout(int argc, char **argv)
 		free_container(tmp);
 		getbegyx(IF->win, IF->main.size.x, IF->main.size.y);
 		getmaxyx(IF->win, IF->main.size.h, IF->main.size.w);
-		add_child(&IF->main, new_container(COL, 8));
-		add_child(&IF->main, &IF->log.win);
+		add_child(&IF->main, (box_ptr_t)new_container(COL, 8));
+		add_child(&IF->main, (box_ptr_t)&IF->log.win);
 	}
 	{ /* Initilize log container */
 		IF->log.win.ptr    = NULL;
@@ -235,7 +235,7 @@ init_layout(int argc, char **argv)
 		redraw_log(&IF->log.win);
 	}
 
-	if (update_layout(&IF->main) != EXIT_SUCCESS)
+	if (update_layout((box_ptr_t)&IF->main) != EXIT_SUCCESS)
 		goto fail;
 	return EXIT_SUCCESS;
 	fail:

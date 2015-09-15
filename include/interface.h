@@ -6,7 +6,7 @@
 // Generic containers used for easy layout management
 enum type { CONT, WIN } type;
 
-typedef union  __attribute__((transparent_union))
+typedef union
 {
 	enum   type      *type;
 	struct common    *common;
@@ -103,11 +103,12 @@ _mucli_log(enum verbosity,const char *func, const char *str, ...);
 void __attribute__((noreturn))
 _mucli_fatal(const char *func, const char *str, ...);
 
-#define mucli_log(v, str, ...) \
-	if (v == LOG_FATAL) \
+#define mucli_log(v, str, ...) { \
+		if (v == LOG_FATAL) \
 		_mucli_fatal(__PRETTY_FUNCTION__, str, ##__VA_ARGS__); \
-	else\
+	else \
 		_mucli_log(v, __PRETTY_FUNCTION__, str, ##__VA_ARGS__); \
+	}
 
 
 
